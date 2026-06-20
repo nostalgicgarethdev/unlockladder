@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { ArrowRight, Layers, Rocket, Shield, Target, TrendingUp } from 'lucide-react'
 import { api } from '../lib/api'
 import { ProjectCard } from '../components/ProjectCard'
+import { TokenCA } from '../components/TokenCA'
 import type { Project } from '../lib/types'
 
 export function HomePage() {
@@ -41,6 +42,7 @@ export function HomePage() {
             Allocate supply to KOLs, advisors, and contributors with conditional unlocks —
             1% when you hit $100M mcap for 7 days, 1% when they drive 1M impressions. No trust, just criteria.
           </p>
+          <TokenCA />
           <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
             <Link
               to="/launch"

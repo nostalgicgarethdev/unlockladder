@@ -22,8 +22,8 @@ function seedDemo(): Project[] {
     name: 'Unlockladder Demo',
     symbol: 'LADDER',
     description: 'Demo token showing milestone-based unlocks on pump.fun',
-    mintAddress: 'HeLp6NuQkmYB4pYWo2zYs22hHsRVK7FZy9',
-    pumpFunUrl: 'https://pump.fun',
+    mintAddress: 'DWP8uLwh4Dx2toehZchiT4WUzqGRDJarrwpVw9uspump',
+    pumpFunUrl: 'https://pump.fun/coin/DWP8uLwh4Dx2toehZchiT4WUzqGRDJarrwpVw9uspump',
     creatorWallet: 'DemoCreator1111111111111111111111111111111',
     allocations: [
       {

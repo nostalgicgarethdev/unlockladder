@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'
 import { Layers, Rocket } from 'lucide-react'
+import { TokenCA } from './TokenCA'
 
 export function Header() {
   const location = useLocation()
@@ -44,6 +45,7 @@ export function Header() {
             <Rocket className="h-3.5 w-3.5" />
             Launch
           </Link>
+          <TokenCA variant="compact" />
           <div className="ml-2">
             <WalletMultiButton />
           </div>

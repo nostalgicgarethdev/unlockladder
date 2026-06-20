@@ -232,7 +232,21 @@ app.delete('/api/projects/:id', async (c) => {
   return c.json({ ok: true })
 })
 
+const DEMO_CA = 'DWP8uLwh4Dx2toehZchiT4WUzqGRDJarrwpVw9uspump'
+const DEMO_PUMP_URL = `https://pump.fun/coin/${DEMO_CA}`
+
 export function seedDemo() {
+  const existing = getProject('demo-unlockladder')
+  if (existing) {
+    if (existing.mintAddress !== DEMO_CA) {
+      updateProject('demo-unlockladder', {
+        mintAddress: DEMO_CA,
+        pumpFunUrl: DEMO_PUMP_URL,
+      })
+    }
+    return
+  }
+
   const projects = getAllProjects()
   if (projects.length > 0) return
 
@@ -241,8 +255,8 @@ export function seedDemo() {
     name: 'Unlockladder Demo',
     symbol: 'LADDER',
     description: 'Demo token showing milestone-based unlocks on pump.fun',
-    mintAddress: 'HeLp6NuQkmYB4pYWo2zYs22hHsRVK7FZy9',
-    pumpFunUrl: 'https://pump.fun',
+    mintAddress: DEMO_CA,
+    pumpFunUrl: DEMO_PUMP_URL,
     creatorWallet: 'DemoCreator1111111111111111111111111111111',
     allocations: [
       {
