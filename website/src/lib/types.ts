@@ -67,7 +67,6 @@ export interface Project {
 
 export interface PreparedLaunch {
   mint: string
-  mintSecret: string
   serializedTx: string
   pumpFunUrl: string
 }

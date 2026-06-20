@@ -1,5 +1,4 @@
-import { Keypair, PublicKey } from '@solana/web3.js'
-import bs58 from 'bs58'
+import { Keypair, PublicKey, VersionedTransaction } from '@solana/web3.js'
 
 export interface PrepareLaunchParams {
   name: string
@@ -15,7 +14,6 @@ export interface PrepareLaunchParams {
 
 export interface PreparedLaunch {
   mint: string
-  mintSecret: string
   serializedTx: string
   pumpFunUrl: string
 }
@@ -171,9 +169,11 @@ export async function prepareClientLaunch(params: PrepareLaunchParams): Promise<
     throw new Error('pumpportal returned an invalid transaction — try again')
   }
 
-  const serializedTx = Buffer.from(txBytes).toString('base64')
-  const mintSecret = bs58.encode(mint.secretKey)
+  // Sign with mint keypair on server — never expose mint secret to the client.
+  const tx = VersionedTransaction.deserialize(txBytes)
+  tx.sign([mint])
+  const serializedTx = Buffer.from(tx.serialize()).toString('base64')
   const pumpFunUrl = `https://pump.fun/coin/${mint.publicKey.toBase58()}`
 
-  return { mint: mint.publicKey.toBase58(), mintSecret, serializedTx, pumpFunUrl }
+  return { mint: mint.publicKey.toBase58(), serializedTx, pumpFunUrl }
 }

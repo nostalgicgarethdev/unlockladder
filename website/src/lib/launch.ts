@@ -1,5 +1,4 @@
-import { Connection, Keypair, VersionedTransaction } from '@solana/web3.js'
-import bs58 from 'bs58'
+import { Connection, VersionedTransaction } from '@solana/web3.js'
 import { api } from './api'
 import { SOLANA_RPC } from './rpc'
 import type { PreparedLaunch } from './types'
@@ -16,9 +15,6 @@ export async function signAndSendLaunch(
 ): Promise<string> {
   const txBytes = Uint8Array.from(atob(prepared.serializedTx), (c) => c.charCodeAt(0))
   const tx = VersionedTransaction.deserialize(txBytes)
-
-  const mint = Keypair.fromSecretKey(bs58.decode(prepared.mintSecret))
-  tx.sign([mint])
 
   const signed = await signTransaction(tx)
   const serialized = toBase64(signed.serialize())

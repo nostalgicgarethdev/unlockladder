@@ -30,7 +30,7 @@ app.use(
     origin: (origin) => {
       if (!origin) return allowedOrigins[0]
       if (allowedOrigins.some((o) => origin === o || origin.startsWith(o))) return origin
-      if (origin.includes('github.io')) return origin
+      if (origin.includes('github.io') || origin.endsWith('.vercel.app')) return origin
       return allowedOrigins[0]
     },
     allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],

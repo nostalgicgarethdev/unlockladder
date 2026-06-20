@@ -10,5 +10,14 @@ build/
 api/data/
 api/index.cjs
 api/index.js
+.vercel
 .idea/
 .vscode/
+
+# Never commit key material
+*.pem
+*.key
+id.json
+keypair.json
+*-keypair.json
+wallet.json

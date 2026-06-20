@@ -4,7 +4,10 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig(({ command }) => ({
   plugins: [react(), tailwindcss()],
-  base: command === 'build' && process.env.GITHUB_PAGES ? '/unlockladder/' : '/',
+  base:
+    command === 'build' && process.env.GITHUB_PAGES && !process.env.VERCEL
+      ? '/unlockladder/'
+      : '/',
   server: {
     port: 5173,
     host: true,
