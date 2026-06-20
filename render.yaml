@@ -1,0 +1,16 @@
+# Optional Render deploy (Vercel is the default API host)
+# https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: unlockladder-api
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install && npm run build --workspace=api
+    startCommand: npm run start --workspace=api
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: FRONTEND_URL
+        value: https://nostalgicgarethdev.github.io/unlockladder

@@ -32,7 +32,8 @@ jobs:
         env:
           GITHUB_PAGES: true
           VITE_SITE_URL: https://nostalgicgarethdev.github.io/unlockladder
-        run: npm run build
+          VITE_API_URL: ${{ vars.VITE_API_URL || 'https://unlockladder-api.vercel.app' }}
+        run: npm run build:web
 
       - name: Add SPA fallback
         run: cp website/dist/index.html website/dist/404.html

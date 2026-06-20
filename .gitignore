@@ -8,5 +8,7 @@ build/
 *.log
 .DS_Store
 api/data/
+api/index.cjs
+api/index.js
 .idea/
 .vscode/

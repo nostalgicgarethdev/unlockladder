@@ -3,11 +3,16 @@
   "version": "1.0.0",
   "private": true,
   "workspaces": [
+    "api",
     "website"
   ],
   "scripts": {
-    "dev": "npm run dev -w website",
-    "build": "npm run build -w website",
-    "preview": "npm run preview -w website"
+    "dev": "concurrently -n api,web -c cyan,magenta \"npm run dev -w api\" \"npm run dev -w website\"",
+    "build": "npm run build -w api && npm run build -w website",
+    "build:web": "npm run build -w website",
+    "start": "npm run start -w api"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
   }
 }

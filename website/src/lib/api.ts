@@ -1,87 +1,41 @@
-import {
-  addAllocation,
-  claimAllocation,
-  createProject,
-  getAllProjects,
-  getProject,
-  removeAllocation,
-  updateProject,
-} from './store'
-import { refreshAllocations } from './milestones'
-import { prepareClientLaunch } from './pump'
 import type { PreparedLaunch, Project, UnlockCriteria } from './types'
 
+const API_BASE = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api`
+  : '/api'
+
+async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    ...options,
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || `Request failed: ${res.status}`)
+  return data as T
+}
+
 export const api = {
-  async getProjects(): Promise<Project[]> {
-    const projects = getAllProjects()
-    return Promise.all(
-      projects.map(async (p) => ({
-        ...p,
-        allocations: await refreshAllocations(p.mintAddress, p.allocations),
-      })),
-    )
-  },
-
-  async getProject(id: string): Promise<Project> {
-    const project = getProject(id)
-    if (!project) throw new Error('Project not found')
-    const allocations = await refreshAllocations(project.mintAddress, project.allocations)
-    const updated = updateProject(project.id, { allocations }) ?? { ...project, allocations }
-    return updated
-  },
-
-  createProject(body: {
+  getProjects: () => request<Project[]>('/projects'),
+  getProject: (id: string) => request<Project>(`/projects/${id}`),
+  createProject: (body: {
     name: string
     symbol: string
     description: string
     creatorWallet: string
     imageUrl?: string
     twitter?: string
-  }): Promise<Project> {
-    const project: Project = {
-      id: crypto.randomUUID(),
-      name: body.name,
-      symbol: body.symbol.toUpperCase().slice(0, 10),
-      description: body.description || '',
-      creatorWallet: body.creatorWallet,
-      imageUrl: body.imageUrl,
-      twitter: body.twitter,
-      allocations: [],
-      totalAllocated: 0,
-      createdAt: new Date().toISOString(),
-    }
-    return Promise.resolve(createProject(project))
-  },
-
-  async prepareLaunch(id: string, creatorPubkey: string, devBuySol?: number): Promise<PreparedLaunch> {
-    const project = getProject(id)
-    if (!project) throw new Error('Project not found')
-    if (project.mintAddress) throw new Error('Already launched')
-
-    return prepareClientLaunch({
-      name: project.name,
-      symbol: project.symbol,
-      description: project.description,
-      creatorPubkey,
-      devBuySol,
-      imageUrl: project.imageUrl,
-      twitter: project.twitter,
-      telegram: project.telegram,
-      website: project.website,
-    })
-  },
-
-  confirmLaunch(id: string, mint: string, pumpFunUrl: string, _signature: string): Promise<Project> {
-    const updated = updateProject(id, {
-      mintAddress: mint,
-      pumpFunUrl,
-      launchedAt: new Date().toISOString(),
-    })
-    if (!updated) throw new Error('Project not found')
-    return Promise.resolve(updated)
-  },
-
-  addAllocation(
+  }) => request<Project>('/projects', { method: 'POST', body: JSON.stringify(body) }),
+  prepareLaunch: (id: string, creatorPubkey: string, devBuySol?: number) =>
+    request<PreparedLaunch>(`/projects/${id}/launch`, {
+      method: 'POST',
+      body: JSON.stringify({ creatorPubkey, devBuySol }),
+    }),
+  confirmLaunch: (id: string, mint: string, pumpFunUrl: string, signature: string) =>
+    request<Project>(`/projects/${id}/confirm-launch`, {
+      method: 'POST',
+      body: JSON.stringify({ mint, pumpFunUrl, signature }),
+    }),
+  addAllocation: (
     id: string,
     body: {
       recipientName: string
@@ -89,33 +43,23 @@ export const api = {
       percentage: number
       criteria: UnlockCriteria
     },
-  ): Promise<Project> {
-    return Promise.resolve(addAllocation(id, body))
-  },
-
-  deleteAllocation(projectId: string, allocId: string): Promise<Project> {
-    return Promise.resolve(removeAllocation(projectId, allocId))
-  },
-
-  async updateImpressions(projectId: string, allocId: string, impressions: number): Promise<Project> {
-    const project = getProject(projectId)
-    if (!project) throw new Error('Project not found')
-
-    const allocations = project.allocations.map((a) => {
-      if (a.id !== allocId) return a
-      if (a.criteria.type !== 'social_impressions') return a
-      return { ...a, criteria: { ...a.criteria, currentImpressions: impressions } }
-    })
-
-    const refreshed = await refreshAllocations(project.mintAddress, allocations)
-    const updated = updateProject(projectId, { allocations: refreshed })
-    if (!updated) throw new Error('Project not found')
-    return updated
-  },
-
-  claimAllocation(projectId: string, allocId: string, wallet: string) {
-    return Promise.resolve(claimAllocation(projectId, allocId, wallet))
-  },
+  ) =>
+    request<Project>(`/projects/${id}/allocations`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  deleteAllocation: (projectId: string, allocId: string) =>
+    request<Project>(`/projects/${projectId}/allocations/${allocId}`, { method: 'DELETE' }),
+  updateImpressions: (projectId: string, allocId: string, impressions: number) =>
+    request<Project>(`/projects/${projectId}/allocations/${allocId}/impressions`, {
+      method: 'PATCH',
+      body: JSON.stringify({ impressions }),
+    }),
+  claimAllocation: (projectId: string, allocId: string, wallet: string) =>
+    request<Project & { claim: { message: string } }>(
+      `/projects/${projectId}/allocations/${allocId}/claim`,
+      { method: 'POST', body: JSON.stringify({ wallet }) },
+    ),
 }
 
 export function formatMcap(value: number): string {
