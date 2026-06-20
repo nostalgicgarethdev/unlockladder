@@ -1,6 +1,8 @@
+import { Connection } from '@solana/web3.js'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { prepareClientLaunch } from './pump.js'
+import { SOLANA_RPC } from './rpc.js'
 import { refreshAllocations } from './milestones.js'
 import {
   createProject,
@@ -110,6 +112,22 @@ app.post('/api/projects/:id/launch', async (c) => {
     return c.json(prepared)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Launch preparation failed'
+    return c.json({ error: message }, 500)
+  }
+})
+
+app.post('/api/send-transaction', async (c) => {
+  const body = await c.req.json<{ transaction: string }>()
+  if (!body.transaction) return c.json({ error: 'transaction required' }, 400)
+
+  try {
+    const txBytes = Buffer.from(body.transaction, 'base64')
+    const connection = new Connection(SOLANA_RPC, 'confirmed')
+    const signature = await connection.sendRawTransaction(txBytes, { skipPreflight: false })
+    await connection.confirmTransaction(signature, 'confirmed').catch(() => {})
+    return c.json({ signature })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Transaction failed'
     return c.json({ error: message }, 500)
   }
 })

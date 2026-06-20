@@ -1,8 +1,14 @@
 import { Connection, Keypair, VersionedTransaction } from '@solana/web3.js'
 import bs58 from 'bs58'
+import { api } from './api'
+import { SOLANA_RPC } from './rpc'
 import type { PreparedLaunch } from './types'
 
-const RPC = 'https://api.mainnet-beta.solana.com'
+function toBase64(bytes: Uint8Array): string {
+  let binary = ''
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
+  return btoa(binary)
+}
 
 export async function signAndSendLaunch(
   prepared: PreparedLaunch,
@@ -12,12 +18,19 @@ export async function signAndSendLaunch(
   const tx = VersionedTransaction.deserialize(txBytes)
 
   const mint = Keypair.fromSecretKey(bs58.decode(prepared.mintSecret))
-
   tx.sign([mint])
 
   const signed = await signTransaction(tx)
-  const connection = new Connection(RPC, 'confirmed')
-  const signature = await connection.sendTransaction(signed, { skipPreflight: false })
-  await connection.confirmTransaction(signature, 'confirmed').catch(() => {})
-  return signature
+  const serialized = toBase64(signed.serialize())
+
+  try {
+    const { signature } = await api.sendTransaction(serialized)
+    return signature
+  } catch {
+    // Fallback if API relay is unavailable (e.g. local dev without API).
+    const connection = new Connection(SOLANA_RPC, 'confirmed')
+    const signature = await connection.sendRawTransaction(signed.serialize(), { skipPreflight: false })
+    await connection.confirmTransaction(signature, 'confirmed').catch(() => {})
+    return signature
+  }
 }

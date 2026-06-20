@@ -35,6 +35,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ mint, pumpFunUrl, signature }),
     }),
+  sendTransaction: (transaction: string) =>
+    request<{ signature: string }>('/send-transaction', {
+      method: 'POST',
+      body: JSON.stringify({ transaction }),
+    }),
   addAllocation: (
     id: string,
     body: {

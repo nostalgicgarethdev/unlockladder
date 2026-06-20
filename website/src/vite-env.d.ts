@@ -3,6 +3,7 @@
 interface ImportMetaEnv {
   readonly VITE_SITE_URL?: string
   readonly VITE_API_URL?: string
+  readonly VITE_SOLANA_RPC?: string
 }
 
 interface ImportMeta {
