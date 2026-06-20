@@ -7,7 +7,11 @@ const DATA_DIR = process.env.VERCEL
   : join(process.cwd(), 'data')
 const STORE_PATH = join(DATA_DIR, 'store.json')
 
+let memoryStore: Store | null = process.env.VERCEL ? { projects: [] } : null
+
 function ensureStore(): Store {
+  if (memoryStore) return memoryStore
+
   if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true })
   if (!existsSync(STORE_PATH)) {
     const empty: Store = { projects: [] }
@@ -18,6 +22,10 @@ function ensureStore(): Store {
 }
 
 function save(store: Store): void {
+  if (memoryStore) {
+    memoryStore = store
+    return
+  }
   writeFileSync(STORE_PATH, JSON.stringify(store, null, 2))
 }
 
