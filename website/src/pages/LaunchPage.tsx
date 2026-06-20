@@ -17,7 +17,6 @@ export function LaunchPage() {
     symbol: '',
     description: '',
     twitter: '',
-    devBuySol: 0,
   })
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -45,15 +44,14 @@ export function LaunchPage() {
   }
 
   const handleLaunch = async () => {
-    if (!projectId || !publicKey || !signTransaction) return
+    if (!projectId || !publicKey || !signTransaction) {
+      alert('Connect your wallet first')
+      return
+    }
     setStep('launching')
     setLoading(true)
     try {
-      const prepared = await api.prepareLaunch(
-        projectId,
-        publicKey.toBase58(),
-        form.devBuySol || undefined,
-      )
+      const prepared = await api.prepareLaunch(projectId, publicKey.toBase58())
       const signature = await signAndSendLaunch(prepared, signTransaction)
       await api.confirmLaunch(projectId, prepared.mint, prepared.pumpFunUrl, signature)
       navigate(`/project/${projectId}`)
@@ -110,17 +108,9 @@ export function LaunchPage() {
               />
             </div>
             <Field label="Twitter (optional)" value={form.twitter} onChange={(v) => setForm({ ...form, twitter: v })} placeholder="https://x.com/yourproject" />
-            <div>
-              <label className="text-xs text-gray-500 mb-1 block">Dev Buy (SOL, optional)</label>
-              <input
-                type="number"
-                min={0}
-                step={0.1}
-                value={form.devBuySol}
-                onChange={(e) => setForm({ ...form, devBuySol: Number(e.target.value) })}
-                className="w-full rounded-xl border border-[#243028] bg-[#0a0f0d] px-4 py-2.5 text-white focus:border-[#4ade80]/50 focus:outline-none"
-              />
-            </div>
+            <p className="text-xs text-gray-500 rounded-lg border border-[#243028] bg-[#0a0f0d] px-3 py-2">
+              You need ~0.02 SOL in your wallet for launch fees. Buy tokens on pump.fun after creation.
+            </p>
 
             {!connected && (
               <p className="text-sm text-amber-400/80 rounded-lg bg-amber-500/5 border border-amber-500/20 px-4 py-3">
