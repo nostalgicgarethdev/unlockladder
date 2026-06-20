@@ -3,6 +3,8 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { prepareClientLaunch } from './pump.js'
 import { SOLANA_RPC } from './rpc.js'
+import { prepareStreamWithdraw, prepareSupplyLock } from './streamflow.js'
+import { lockAmountForPercentage } from './tokens.js'
 import { refreshAllocations } from './milestones.js'
 import {
   createProject,
@@ -190,6 +192,7 @@ app.delete('/api/projects/:id/allocations/:allocId', async (c) => {
   const alloc = project.allocations.find((a) => a.id === c.req.param('allocId'))
   if (!alloc) return c.json({ error: 'Allocation not found' }, 404)
   if (alloc.status === 'claimed') return c.json({ error: 'Cannot delete claimed allocation' }, 400)
+  if (alloc.supplyLocked) return c.json({ error: 'Cannot delete — supply is locked on-chain via Streamflow' }, 400)
 
   const allocations = project.allocations.filter((a) => a.id !== alloc.id)
   const updated = updateProject(project.id, {
@@ -215,14 +218,119 @@ app.patch('/api/projects/:id/allocations/:allocId/impressions', async (c) => {
   return c.json(updated)
 })
 
-app.post('/api/projects/:id/allocations/:allocId/claim', async (c) => {
+app.post('/api/projects/:id/allocations/:allocId/prepare-lock', async (c) => {
+  const project = getProject(c.req.param('id'))
+  if (!project) return c.json({ error: 'Project not found' }, 404)
+  if (!project.mintAddress) return c.json({ error: 'Launch token on pump.fun before locking supply' }, 400)
+
+  const alloc = project.allocations.find((a) => a.id === c.req.param('allocId'))
+  if (!alloc) return c.json({ error: 'Allocation not found' }, 404)
+  if (alloc.supplyLocked) return c.json({ error: 'Supply already locked for this allocation' }, 400)
+
+  const body = await c.req.json<{ creatorPubkey: string; lockPeriodDays?: number }>()
+  if (!body.creatorPubkey) return c.json({ error: 'creatorPubkey required' }, 400)
+  if (body.creatorPubkey !== project.creatorWallet) {
+    return c.json({ error: 'Only the project creator can lock supply' }, 403)
+  }
+
+  try {
+    const { amount, decimals, humanAmount } = await lockAmountForPercentage(
+      project.mintAddress,
+      alloc.percentage,
+    )
+    const prepared = await prepareSupplyLock({
+      mintAddress: project.mintAddress,
+      senderPubkey: body.creatorPubkey,
+      recipientPubkey: alloc.recipientWallet,
+      amount,
+      decimals,
+      humanAmount,
+      symbol: project.symbol,
+      recipientName: alloc.recipientName,
+      lockPeriodDays: body.lockPeriodDays,
+    })
+    return c.json(prepared)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Failed to prepare lock'
+    return c.json({ error: message }, 500)
+  }
+})
+
+app.post('/api/projects/:id/allocations/:allocId/confirm-lock', async (c) => {
+  const project = getProject(c.req.param('id'))
+  if (!project) return c.json({ error: 'Project not found' }, 404)
+
+  const alloc = project.allocations.find((a) => a.id === c.req.param('allocId'))
+  if (!alloc) return c.json({ error: 'Allocation not found' }, 404)
+
+  const body = await c.req.json<{
+    streamId: string
+    lockAmount: string
+    unlockAt: number
+    signature: string
+  }>()
+  if (!body.streamId || !body.lockAmount || !body.unlockAt) {
+    return c.json({ error: 'streamId, lockAmount, and unlockAt required' }, 400)
+  }
+
+  const allocations = project.allocations.map((a) =>
+    a.id === alloc.id
+      ? {
+          ...a,
+          streamId: body.streamId,
+          lockAmount: body.lockAmount,
+          unlockAt: body.unlockAt,
+          lockedAt: new Date().toISOString(),
+          supplyLocked: true,
+        }
+      : a,
+  )
+  const updated = updateProject(project.id, { allocations })
+  return c.json(updated)
+})
+
+app.post('/api/projects/:id/allocations/:allocId/prepare-claim', async (c) => {
   const project = getProject(c.req.param('id'))
   if (!project) return c.json({ error: 'Project not found' }, 404)
 
   const body = await c.req.json<{ wallet: string }>()
   const alloc = project.allocations.find((a) => a.id === c.req.param('allocId'))
   if (!alloc) return c.json({ error: 'Allocation not found' }, 404)
-  if (alloc.status !== 'unlocked') return c.json({ error: 'Allocation not yet unlocked' }, 400)
+  if (!alloc.supplyLocked || !alloc.streamId) {
+    return c.json({ error: 'Supply not locked on-chain yet — creator must lock tokens first' }, 400)
+  }
+  if (alloc.status !== 'unlocked') {
+    return c.json({ error: 'Milestone criteria not met yet' }, 400)
+  }
+  if (alloc.recipientWallet !== body.wallet) {
+    return c.json({ error: 'Only the recipient wallet can claim' }, 403)
+  }
+
+  const now = Math.floor(Date.now() / 1000)
+  if (alloc.unlockAt && now < alloc.unlockAt) {
+    const date = new Date(alloc.unlockAt * 1000).toLocaleDateString()
+    return c.json({ error: `On-chain lock active until ${date}. Milestone met — tokens release after this date.` }, 400)
+  }
+
+  try {
+    const prepared = await prepareStreamWithdraw({
+      streamId: alloc.streamId,
+      recipientPubkey: body.wallet,
+    })
+    return c.json(prepared)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Failed to prepare claim'
+    return c.json({ error: message }, 500)
+  }
+})
+
+app.post('/api/projects/:id/allocations/:allocId/confirm-claim', async (c) => {
+  const project = getProject(c.req.param('id'))
+  if (!project) return c.json({ error: 'Project not found' }, 404)
+
+  const body = await c.req.json<{ wallet: string; signature: string }>()
+  const alloc = project.allocations.find((a) => a.id === c.req.param('allocId'))
+  if (!alloc) return c.json({ error: 'Allocation not found' }, 404)
   if (alloc.recipientWallet !== body.wallet) {
     return c.json({ error: 'Only the recipient wallet can claim' }, 403)
   }
@@ -239,7 +347,8 @@ app.post('/api/projects/:id/allocations/:allocId/claim', async (c) => {
       allocationId: alloc.id,
       percentage: alloc.percentage,
       recipient: alloc.recipientWallet,
-      message: `${alloc.percentage}% of ${project.symbol} allocation marked as claimed. Transfer tokens from your treasury wallet.`,
+      streamId: alloc.streamId,
+      message: `${alloc.percentage}% of ${project.symbol} withdrawn from Streamflow lock.`,
     },
   })
 })

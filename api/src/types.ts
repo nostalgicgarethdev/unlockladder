@@ -46,6 +46,12 @@ export interface Allocation {
   unlockedAt?: string
   claimedAt?: string
   createdAt: string
+  /** Streamflow contract id — tokens escrowed on-chain */
+  streamId?: string
+  lockAmount?: string
+  unlockAt?: number
+  lockedAt?: string
+  supplyLocked?: boolean
 }
 
 export interface Project {

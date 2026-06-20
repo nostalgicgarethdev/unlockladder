@@ -145,13 +145,32 @@ export function ProjectPage() {
           </div>
         </div>
 
+        {project.mintAddress && isCreator && project.allocations.some((a) => !a.supplyLocked) && (
+          <div className="mb-6 rounded-xl border border-[#4ade80]/20 bg-[#4ade80]/5 px-4 py-3 text-sm text-gray-300">
+            Lock each allocation&apos;s supply via{' '}
+            <a
+              href="https://streamflow.finance"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#4ade80] hover:underline"
+            >
+              Streamflow
+            </a>
+            . Tokens leave your wallet and sit in on-chain escrow until milestones are met and the lock period ends.
+          </div>
+        )}
+
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-3 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
           {[
             { label: 'Allocated', value: `${project.totalAllocated}%` },
             { label: 'Allocations', value: String(project.allocations.length) },
             {
-              label: 'Unlocked',
+              label: 'Supply Locked',
+              value: String(project.allocations.filter((a) => a.supplyLocked).length),
+            },
+            {
+              label: 'Milestones Met',
               value: String(
                 project.allocations.filter((a) => a.status === 'unlocked' || a.status === 'claimed').length,
               ),

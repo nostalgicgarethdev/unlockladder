@@ -45,6 +45,22 @@ export interface Allocation {
   unlockedAt?: string
   claimedAt?: string
   createdAt: string
+  streamId?: string
+  lockAmount?: string
+  unlockAt?: number
+  lockedAt?: string
+  supplyLocked?: boolean
+}
+
+export interface PreparedLock {
+  serializedTx: string
+  streamId: string
+  unlockAt: number
+  lockAmount: string
+}
+
+export interface PreparedClaim {
+  serializedTx: string
 }
 
 export interface Project {

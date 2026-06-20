@@ -1,4 +1,4 @@
-import type { PreparedLaunch, Project, UnlockCriteria } from './types'
+import type { PreparedClaim, PreparedLaunch, PreparedLock, Project, UnlockCriteria } from './types'
 
 const API_BASE = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api`
@@ -60,10 +60,32 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify({ impressions }),
     }),
-  claimAllocation: (projectId: string, allocId: string, wallet: string) =>
-    request<Project & { claim: { message: string } }>(
-      `/projects/${projectId}/allocations/${allocId}/claim`,
-      { method: 'POST', body: JSON.stringify({ wallet }) },
+  prepareLock: (projectId: string, allocId: string, creatorPubkey: string, lockPeriodDays?: number) =>
+    request<PreparedLock>(`/projects/${projectId}/allocations/${allocId}/prepare-lock`, {
+      method: 'POST',
+      body: JSON.stringify({ creatorPubkey, lockPeriodDays }),
+    }),
+  confirmLock: (
+    projectId: string,
+    allocId: string,
+    streamId: string,
+    lockAmount: string,
+    unlockAt: number,
+    signature: string,
+  ) =>
+    request<Project>(`/projects/${projectId}/allocations/${allocId}/confirm-lock`, {
+      method: 'POST',
+      body: JSON.stringify({ streamId, lockAmount, unlockAt, signature }),
+    }),
+  prepareClaim: (projectId: string, allocId: string, wallet: string) =>
+    request<PreparedClaim>(`/projects/${projectId}/allocations/${allocId}/prepare-claim`, {
+      method: 'POST',
+      body: JSON.stringify({ wallet }),
+    }),
+  confirmClaim: (projectId: string, allocId: string, wallet: string, signature: string) =>
+    request<Project & { claim: { message: string; streamId?: string } }>(
+      `/projects/${projectId}/allocations/${allocId}/confirm-claim`,
+      { method: 'POST', body: JSON.stringify({ wallet, signature }) },
     ),
 }
 
