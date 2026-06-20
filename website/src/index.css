@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Space Grotesk", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  --color-pump: #4ade80;
+  --color-pump-dim: #22c55e;
+  --color-surface: #0a0f0d;
+  --color-surface-2: #111916;
+  --color-surface-3: #1a2420;
+  --color-border: #243028;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--color-surface);
+  color: #e8f5e9;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.wallet-adapter-button {
+  background: linear-gradient(135deg, #4ade80, #22c55e) !important;
+  color: #0a0f0d !important;
+  font-family: var(--font-sans) !important;
+  font-weight: 600 !important;
+  border-radius: 12px !important;
+  height: 42px !important;
+}
+
+.wallet-adapter-modal-wrapper {
+  z-index: 9999 !important;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-surface);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
